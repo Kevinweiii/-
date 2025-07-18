@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>系統狀態檢查</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+    .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+    .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+    .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+    .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+    button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+    .test-btn { background: #007bff; color: white; }
+    .type-card { border: 2px solid #ddd; padding: 10px; margin: 5px; display: inline-block; cursor: pointer; }
+    .type-card:hover { border-color: #007bff; }
+  </style>
+</head>
+<body>
+  <h1>🔧 智能推薦系統狀態檢查</h1>
+  
+  <div id="status" class="status info">正在檢查系統狀態...</div>
+  
+  <h2>📊 基本狀態</h2>
+  <div id="basicStatus">檢查中...</div>
+  
+  <h2>🔗 WebSocket 測試</h2>
+  <button class="test-btn" onclick="testWebSocket()">測試連接</button>
+  <div id="wsStatus">等待測試...</div>
+  
+  <h2>🎯 推薦卡片測試</h2>
+  <div class="type-card" onclick="testRecommendation('健康推薦')">
+    <div>🥗</div>
+    <div>健康推薦</div>
+  </div>
+  <div class="type-card" onclick="testRecommendation('快速料理')">
+    <div>⚡</div>
+    <div>快速料理</div>
+  </div>
+  <div id="cardStatus">等待測試...</div>
+  
+  <h2>⚡ 快速按鈕測試</h2>
+  <button class="test-btn" onclick="testQuickRecommendation('早餐推薦')">🌅 早餐推薦</button>
+  <button class="test-btn" onclick="testQuickRecommendation('午餐推薦')">🍱 午餐推薦</button>
+  <div id="quickStatus">等待測試...</div>
+  
+  <h2>📝 測試結果</h2>
+  <div id="testResults"></div>
+  
+  <div style="margin-top: 2rem;">
+    <a href="/" style="display: inline-block; padding: 10px 20px; background: #6c757d; color: white; text-decoration: none; border-radius: 5px;">
+      ⬅️ 返回主頁面
+    </a>
+  </div>
+  
+  <script>
+    let results = [];
+    
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = `[${timestamp}] ${message}`;
+      results.push(logEntry);
+      
+      const resultsDiv = document.getElementById('testResults');
+      resultsDiv.innerHTML = results.slice(-10).join('<br>');
+      
+      console.log(logEntry);
+    }
+    
+    function updateStatus(id, message, type = 'info') {
+      const element = document.getElementById(id);
+      element.innerHTML = message;
+      element.className = `status ${type}`;
+    }
+    
+    function testWebSocket() {
+      log('開始測試 WebSocket 連接...');
+      updateStatus('wsStatus', '正在連接...', 'info');
+      
+      try {
+        const ws = new WebSocket(`ws://${location.host}`);
+        
+        ws.onopen = function() {
+          log('✅ WebSocket 連接成功', 'success');
+          updateStatus('wsStatus', '✅ WebSocket 連接成功', 'success');
+          
+          // 測試發送消息
+          ws.send(JSON.stringify({ prompt: '測試連接' }));
+        };
+        
+        ws.onmessage = function(event) {
+          log('📥 收到服務器回應', 'success');
+          updateStatus('wsStatus', '✅ WebSocket 功能正常', 'success');
+          ws.close();
+        };
+        
+        ws.onerror = function(error) {
+          log('❌ WebSocket 連接失敗', 'error');
+          updateStatus('wsStatus', '❌ WebSocket 連接失敗', 'error');
+        };
+        
+        ws.onclose = function() {
+          log('🔌 WebSocket 連接已關閉');
+        };
+        
+      } catch (error) {
+        log('❌ WebSocket 測試異常: ' + error.message, 'error');
+        updateStatus('wsStatus', '❌ WebSocket 測試異常', 'error');
+      }
+    }
+    
+    function testRecommendation(type) {
+      log(`🎯 測試推薦卡片: ${type}`);
+      updateStatus('cardStatus', `測試 ${type} 中...`, 'info');
+      
+      try {
+        const ws = new WebSocket(`ws://${location.host}`);
+        
+        ws.onopen = function() {
+          ws.send(JSON.stringify({ prompt: `請推薦${type}` }));
+        };
+        
+        ws.onmessage = function(event) {
+          log(`✅ ${type} 推薦功能正常`, 'success');
+          updateStatus('cardStatus', `✅ ${type} 推薦功能正常`, 'success');
+          ws.close();
+        };
+        
+        ws.onerror = function() {
+          log(`❌ ${type} 推薦功能失敗`, 'error');
+          updateStatus('cardStatus', `❌ ${type} 推薦功能失敗`, 'error');
+        };
+        
+      } catch (error) {
+        log(`❌ ${type} 測試異常: ${error.message}`, 'error');
+        updateStatus('cardStatus', `❌ ${type} 測試異常`, 'error');
+      }
+    }
+    
+    function testQuickRecommendation(type) {
+      log(`⚡ 測試快速推薦: ${type}`);
+      updateStatus('quickStatus', `測試 ${type} 中...`, 'info');
+      
+      try {
+        const ws = new WebSocket(`ws://${location.host}`);
+        
+        ws.onopen = function() {
+          ws.send(JSON.stringify({ prompt: `請推薦${type}` }));
+        };
+        
+        ws.onmessage = function(event) {
+          log(`✅ ${type} 功能正常`, 'success');
+          updateStatus('quickStatus', `✅ ${type} 功能正常`, 'success');
+          ws.close();
+        };
+        
+        ws.onerror = function() {
+          log(`❌ ${type} 功能失敗`, 'error');
+          updateStatus('quickStatus', `❌ ${type} 功能失敗`, 'error');
+        };
+        
+      } catch (error) {
+        log(`❌ ${type} 測試異常: ${error.message}`, 'error');
+        updateStatus('quickStatus', `❌ ${type} 測試異常`, 'error');
+      }
+    }
+    
+    // 頁面載入時的基本檢查
+    window.onload = function() {
+      log('🚀 檢查頁面已載入');
+      
+      // 基本狀態檢查
+      let statusText = '';
+      statusText += `🌐 URL: ${location.href}<br>`;
+      statusText += `🕒 時間: ${new Date().toLocaleString()}<br>`;
+      statusText += `📱 瀏覽器: ${navigator.userAgent.split(' ')[0]}<br>`;
+      statusText += `🔧 WebSocket 支援: ${typeof WebSocket !== 'undefined' ? '✅' : '❌'}<br>`;
+      
+      document.getElementById('basicStatus').innerHTML = statusText;
+      updateStatus('status', '✅ 檢查頁面已準備就緒', 'success');
+      
+      log('✅ 基本檢查完成');
+    };
+  </script>
+</body>
+</html> 
